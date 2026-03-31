@@ -1,7 +1,7 @@
 import { Play, Info, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export const Hero = () => {
+export const Hero = ({ onPlay }) => {
   return (
     <section className="relative w-full min-h-[85vh] sm:min-h-screen text-white flex flex-col justify-between overflow-hidden">
       
@@ -17,8 +17,8 @@ export const Hero = () => {
             2. Bottom gradient perfectly merges with the background color of the grid section below.
             3. Right gradient for small badges/balance. 
         */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-slate-900 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-r from-black/90 via-black/50 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-linear-to-t from-slate-900 to-transparent" />
       </div>
 
       {/* Hero Content (Left side text, Buttons) */}
@@ -54,7 +54,10 @@ export const Hero = () => {
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-4">
-            <button className="flex items-center gap-2 bg-white text-black px-6 md:px-8 py-2.5 md:py-3.5 rounded font-bold text-lg md:text-xl hover:bg-slate-200 transition-all hover:scale-105 shadow-xl">
+            <button 
+              onClick={onPlay}
+              className="flex items-center gap-2 bg-white text-black px-6 md:px-8 py-2.5 md:py-3.5 rounded font-bold text-lg md:text-xl hover:bg-slate-200 transition-all hover:scale-105 shadow-xl"
+            >
               <Play className="fill-black" size={24} /> Play
             </button>
             <button className="flex items-center gap-2 bg-slate-500/50 text-white backdrop-blur-md px-6 md:px-8 py-2.5 md:py-3.5 rounded font-bold text-lg md:text-xl hover:bg-slate-500/70 transition-all hover:scale-105 border border-white/10 shadow-xl">

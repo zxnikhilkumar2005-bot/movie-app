@@ -4,7 +4,8 @@ import { SearchBar } from './components/SearchBar';
 import { MovieCard } from './components/MovieCard';
 import { SkeletonCard } from './components/SkeletonCard';
 import { MovieModal } from './components/MovieModal';
-import { ThemeToggle } from './components/ThemeToggle';
+import { Navbar } from './components/layout/Navbar';
+import { Hero } from './components/layout/Hero';
 import { useMovies } from './hooks/useMovies';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { Film, AlertCircle, Heart, Bookmark, Filter, Home, Loader2 } from 'lucide-react';
@@ -103,47 +104,20 @@ function App() {
 
   const displayedMovies = getDisplayedData();
 
-  return (
-    <div className="min-h-screen transition-colors duration-500 pb-20 font-sans">
-      
-      {/* Navbar Fixed */}
-      <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-500">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-          <button onClick={() => setActiveTab('home')} className="flex items-center gap-2 group">
-             <Film className="text-red-600 dark:text-red-500 group-hover:rotate-12 transition-transform duration-300 drop-shadow-md" size={32} />
-             <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-500 transition-colors">
-               Movie<span className="font-light opacity-80">Vault</span>
-             </span>
-          </button>
-          
-          <div className="flex items-center gap-3 sm:gap-6">
-            <ThemeToggle theme={theme} setTheme={setTheme} />
-            
-            <nav className="hidden sm:flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-full border border-slate-200 dark:border-slate-700">
-               <button 
-                 onClick={() => setActiveTab('home')}
-                 className={`flex items-center gap-2 px-5 py-2 rounded-full font-semibold text-sm transition-all duration-300 ${activeTab === 'home' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
-               >
-                 <Home size={16} /> Home
-               </button>
-               <button 
-                 onClick={() => setActiveTab('favorites')}
-                 className={`flex items-center gap-2 px-5 py-2 rounded-full font-semibold text-sm transition-all duration-300 ${activeTab === 'favorites' ? 'bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
-               >
-                 <Heart size={16} className={activeTab === 'favorites' ? 'fill-current' : ''} /> Favs
-               </button>
-               <button 
-                 onClick={() => setActiveTab('watchlist')}
-                 className={`flex items-center gap-2 px-5 py-2 rounded-full font-semibold text-sm transition-all duration-300 ${activeTab === 'watchlist' ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
-               >
-                 <Bookmark size={16} className={activeTab === 'watchlist' ? 'fill-current' : ''} /> Watchlist
-               </button>
-            </nav>
-          </div>
-        </div>
-      </header>
+  const handleScrollToSearch = () => {
+     window.scrollTo({ top: window.innerHeight - 100, behavior: 'smooth' });
+  };
 
-      <main className="max-w-7xl mx-auto px-6 pt-8">
+  return (
+    <div className="min-h-screen transition-colors duration-500 pb-20 font-sans dark:bg-slate-950">
+      
+      {/* Netflix-style Navbar */}
+      <Navbar theme={theme} setTheme={setTheme} activeTab={activeTab} setActiveTab={setActiveTab} />
+      
+      {/* Cinematic Hero Component - Only shown aggressively on the Home tab */}
+      {activeTab === 'home' && <Hero onPlay={handleScrollToSearch} />}
+
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-8 pt-8">
         
         {/* Search & Filters Section */}
         {activeTab === 'home' && (

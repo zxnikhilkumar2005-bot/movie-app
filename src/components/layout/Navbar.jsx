@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, Bell, User, Film } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle'; // Assumes moving it or referencing existing
 
-export const Navbar = ({ theme, setTheme }) => {
+export const Navbar = ({ theme, setTheme, activeTab, setActiveTab }) => {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -20,13 +20,13 @@ export const Navbar = ({ theme, setTheme }) => {
   }, []);
 
   return (
-    <nav className={`fixed top-0 w-full z-50 transition-colors duration-500 ease-in-out ${isScrolled ? 'bg-slate-900 shadow-xl' : 'bg-transparent bg-gradient-to-b from-black/80 to-transparent'}`}>
+    <nav className={`fixed top-0 w-full z-50 transition-colors duration-500 ease-in-out ${isScrolled ? 'bg-slate-900 shadow-xl border-b border-slate-800' : 'bg-transparent bg-linear-to-b from-black/90 to-transparent'}`}>
       <div className="max-w-[1400px] mx-auto px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between">
         
         {/* Left Side: Logo & Primary Navigation */}
         <div className="flex items-center gap-8">
           {/* Brand Logo */}
-          <div className="flex items-center gap-2 cursor-pointer group">
+          <div onClick={() => setActiveTab('home')} className="flex items-center gap-2 cursor-pointer group">
             <Film className="text-red-600 transition-transform duration-300 group-hover:scale-110" size={32} />
             <span className="text-2xl font-black tracking-tight text-white uppercase">
               Movie<span className="text-red-600">Vault</span>
@@ -35,11 +35,9 @@ export const Navbar = ({ theme, setTheme }) => {
           
           {/* Desktop Links */}
           <ul className="hidden md:flex items-center gap-5 text-sm font-medium text-slate-200">
-            <li className="cursor-pointer font-bold text-white transition-colors">Home</li>
-            <li className="cursor-pointer hover:text-white transition-colors">TV Shows</li>
-            <li className="cursor-pointer hover:text-white transition-colors">Movies</li>
-            <li className="cursor-pointer hover:text-white transition-colors">New & Popular</li>
-            <li className="cursor-pointer hover:text-white transition-colors">My List</li>
+            <li onClick={() => setActiveTab('home')} className={`cursor-pointer transition-colors ${activeTab === 'home' ? 'font-bold text-white' : 'hover:text-white'}`}>Home</li>
+            <li onClick={() => setActiveTab('favorites')} className={`cursor-pointer transition-colors ${activeTab === 'favorites' ? 'font-bold text-white' : 'hover:text-white'}`}>Favorites</li>
+            <li onClick={() => setActiveTab('watchlist')} className={`cursor-pointer transition-colors ${activeTab === 'watchlist' ? 'font-bold text-white' : 'hover:text-white'}`}>My Watchlist</li>
           </ul>
         </div>
 
