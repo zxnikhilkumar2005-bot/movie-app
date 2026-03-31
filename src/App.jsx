@@ -1,35 +1,32 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useInView } from 'react-intersection-observer';
-import { SearchBar } from './components/SearchBar';
 import { MovieCard } from './components/MovieCard';
 import { SkeletonCard } from './components/SkeletonCard';
 import { MovieModal } from './components/MovieModal';
 import { Navbar } from './components/layout/Navbar';
 import { Hero } from './components/layout/Hero';
+import { HomeRow } from './components/HomeRow';
 import { useMovies } from './hooks/useMovies';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { Film, AlertCircle, Heart, Bookmark, Filter, Home, Loader2 } from 'lucide-react';
+import { AlertCircle, Heart, Bookmark, Filter, Home, Loader2 } from 'lucide-react';
 
 function App() {
   const [theme, setTheme] = useLocalStorage('movieAppTheme', 'dark');
-  const [recentSearches, setRecentSearches] = useLocalStorage('movieRecentSearches', ['Avengers']);
   const [favorites, setFavorites] = useLocalStorage('movieFavorites', []);
   const [watchlist, setWatchlist] = useLocalStorage('movieWatchlist', []);
   
-  const [query, setQuery] = useState('');
-  const [activeQuery, setActiveQuery] = useState('Avengers'); // What's actually fetching
+  const [isSearching, setIsSearching] = useState(false);
+  const [activeQuery, setActiveQuery] = useState('');
   const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState('home'); // home | favorites | watchlist
   const [selectedMovieId, setSelectedMovieId] = useState(null);
   
-  // Filters mapped exactly to OMDB API limitations
   const [filters, setFilters] = useState({ type: '', year: '', sortByYear: false });
   const [showFilters, setShowFilters] = useState(false);
 
   const { movies, loading, loadingMore, error, totalResults, searchMovies, setMovies } = useMovies();
   const { ref, inView } = useInView({ threshold: 0.1 });
 
-  // Sync theme to root HTML element for Tailwind
   useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -38,36 +35,32 @@ function App() {
     }
   }, [theme]);
 
-  // Initial Fetch & Search Updates
+  // Initial Fetch & Search Updates (Only trigger if isSearching is true)
   useEffect(() => {
-    if (activeTab === 'home') {
+    if (activeTab === 'home' && isSearching && activeQuery) {
       setPage(1);
       searchMovies(activeQuery, 1, filters);
     }
-  }, [activeQuery, filters, activeTab, searchMovies]);
+  }, [activeQuery, filters, activeTab, isSearching, searchMovies]);
 
-  // Infinite Scroll Trigger
+  // Infinite Scroll Trigger (Only when searching)
   useEffect(() => {
-    if (inView && activeTab === 'home' && !loading && !loadingMore && movies.length < totalResults) {
+    if (inView && activeTab === 'home' && isSearching && !loading && !loadingMore && movies.length < totalResults) {
       const next = page + 1;
       setPage(next);
       searchMovies(activeQuery, next, filters);
     }
-  }, [inView, activeTab, loading, loadingMore, movies.length, totalResults, page, activeQuery, filters, searchMovies]);
+  }, [inView, activeTab, isSearching, loading, loadingMore, movies.length, totalResults, page, activeQuery, filters, searchMovies]);
 
   const handleSearchSubmit = (searchVal) => {
-    if (!searchVal.trim()) return;
+    if (!searchVal.trim()) {
+       setIsSearching(false);
+       setActiveQuery('');
+       return;
+    }
+    setIsSearching(true);
     setActiveQuery(searchVal);
     setActiveTab('home');
-    
-    // Add to recent searches unique
-    const newRecents = [searchVal, ...recentSearches.filter(s => s.toLowerCase() !== searchVal.toLowerCase())].slice(0, 5);
-    setRecentSearches(newRecents);
-  };
-
-  const handleRecentSelect = (term) => {
-    setQuery(term);
-    handleSearchSubmit(term);
   };
 
   const toggleFavorite = (movie) => {
@@ -86,11 +79,9 @@ function App() {
 
   const handleSortByYear = () => {
     setFilters(f => ({ ...f, sortByYear: !f.sortByYear }));
-    // Client-side sorting for currently loaded arrays
     if (!filters.sortByYear) {
       setMovies(prev => [...prev].sort((a, b) => parseInt(b.Year || '0') - parseInt(a.Year || '0')));
     } else {
-       // if toggled off, we re-fetch to restore OMDB's default relevance sorting
       searchMovies(activeQuery, 1, { ...filters, sortByYear: false });
       setPage(1);
     }
@@ -104,80 +95,137 @@ function App() {
 
   const displayedMovies = getDisplayedData();
 
-  const handleScrollToSearch = () => {
-     window.scrollTo({ top: window.innerHeight - 100, behavior: 'smooth' });
+  const handleScrollToContent = () => {
+     window.scrollTo({ top: window.innerHeight - 80, behavior: 'smooth' });
   };
 
   return (
-    <div className="min-h-screen transition-colors duration-500 pb-20 font-sans dark:bg-slate-950">
+    <div className="min-h-screen transition-colors duration-500 pb-20 font-sans dark:bg-slate-950 bg-slate-50">
       
-      {/* Netflix-style Navbar */}
-      <Navbar theme={theme} setTheme={setTheme} activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* Search integrated exclusively in Navbar */}
+      <Navbar 
+        theme={theme} 
+        setTheme={setTheme} 
+        activeTab={activeTab} 
+        setActiveTab={(tab) => {
+            setActiveTab(tab);
+            if (tab !== 'home') setIsSearching(false);
+        }} 
+        onSearchSubmit={handleSearchSubmit}
+      />
       
-      {/* Cinematic Hero Component - Only shown aggressively on the Home tab */}
-      {activeTab === 'home' && <Hero onPlay={handleScrollToSearch} />}
-
-      <main className="max-w-[1400px] mx-auto px-4 sm:px-8 pt-8">
-        
-        {/* Search & Filters Section */}
-        {activeTab === 'home' && (
-          <div className="mb-10 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <SearchBar 
-              value={query} 
-              onChange={setQuery} 
-              onSearchSubmit={handleSearchSubmit} 
-              recentSearches={recentSearches}
-              onSelectRecent={handleRecentSelect}
+      {/* Netflix-style Homepage Layout */}
+      {!isSearching && activeTab === 'home' && (
+        <div className="pb-10">
+          <Hero onPlay={handleScrollToContent} />
+          
+          <div className="max-w-[1400px] mx-auto mt-[-80px] sm:mt-[-120px] relative z-20 space-y-10 sm:space-y-16">
+            <HomeRow 
+               title="Trending Now" 
+               query="Marvel" 
+               favorites={favorites} 
+               watchlist={watchlist} 
+               onToggleFav={toggleFavorite} 
+               onToggleWatchlist={toggleWatchlist} 
+               onSelectMovie={setSelectedMovieId}
             />
-            
-            <div className="flex flex-wrap items-center justify-center gap-4 mt-4">
-              <button 
-                onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${showFilters ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700/80'}`}
-              >
-                <Filter size={16} /> Filters & Sorting
-              </button>
-              
-              {showFilters && (
-                <div className="flex flex-wrap gap-2 animate-in zoom-in-95 duration-200">
-                  <select 
-                    value={filters.type} 
-                    onChange={(e) => setFilters(f => ({ ...f, type: e.target.value }))}
-                    className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  >
-                    <option value="">All Types</option>
-                    <option value="movie">Movies</option>
-                    <option value="series">Series</option>
-                    <option value="episode">Episodes</option>
-                  </select>
+            <HomeRow 
+               title="Top Rated Features" 
+               query="Batman" 
+               favorites={favorites} 
+               watchlist={watchlist} 
+               onToggleFav={toggleFavorite} 
+               onToggleWatchlist={toggleWatchlist} 
+               onSelectMovie={setSelectedMovieId}
+            />
+            <HomeRow 
+               title="Sci-Fi & Fantasy" 
+               query="Star" 
+               favorites={favorites} 
+               watchlist={watchlist} 
+               onToggleFav={toggleFavorite} 
+               onToggleWatchlist={toggleWatchlist} 
+               onSelectMovie={setSelectedMovieId}
+            />
+            <HomeRow 
+               title="Crime & Action" 
+               query="Fast" 
+               favorites={favorites} 
+               watchlist={watchlist} 
+               onToggleFav={toggleFavorite} 
+               onToggleWatchlist={toggleWatchlist} 
+               onSelectMovie={setSelectedMovieId}
+            />
+            <HomeRow 
+               title="Award Winners" 
+               query="Lord of the rings" 
+               favorites={favorites} 
+               watchlist={watchlist} 
+               onToggleFav={toggleFavorite} 
+               onToggleWatchlist={toggleWatchlist} 
+               onSelectMovie={setSelectedMovieId}
+            />
+          </div>
+        </div>
+      )}
 
-                  <input 
-                    type="number" 
-                    placeholder="Year (e.g. 2024)" 
-                    value={filters.year}
-                    onChange={(e) => setFilters(f => ({ ...f, year: e.target.value }))}
-                    className="w-32 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  />
-                  
-                  <button 
-                    onClick={handleSortByYear}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filters.sortByYear ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80'}`}
-                  >
-                    Sort by Year {filters.sortByYear && '(Client)'}
-                  </button>
-                </div>
-              )}
+      {/* Main Content Area: Search Grid / Favorites / Watchlist */}
+      <main className={`max-w-[1400px] mx-auto px-4 sm:px-8 ${(!isSearching && activeTab === 'home') ? 'pt-0' : 'pt-28'}`}>
+        
+        {/* Search Results Controls */}
+        {activeTab === 'home' && isSearching && (
+          <div className="mb-10 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+              
+              <div>
+                <h2 className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+                  Results for <span className="text-red-500">"{activeQuery}"</span>
+                </h2>
+                {!loading && !error && totalResults > 0 && (
+                  <p className="text-slate-500 dark:text-slate-400 mt-1">{totalResults} titles found</p>
+                )}
+              </div>
+
+              {/* Filters */}
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${showFilters ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}`}
+                >
+                  <Filter size={16} /> Filters
+                </button>
+              </div>
             </div>
             
-            {/* Status indicators */}
-            <div className="text-center mt-6">
-               <h2 className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-                 Results for <span className="text-red-600 dark:text-red-500 uppercase tracking-widest">{activeQuery}</span>
-               </h2>
-               {!loading && !error && totalResults > 0 && (
-                 <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">{totalResults} titles found</p>
-               )}
-            </div>
+            {showFilters && (
+              <div className="flex flex-wrap gap-3 mt-4 animate-in zoom-in-95 duration-200">
+                <select 
+                  value={filters.type} 
+                  onChange={(e) => setFilters(f => ({ ...f, type: e.target.value }))}
+                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                >
+                  <option value="">All Types</option>
+                  <option value="movie">Movies</option>
+                  <option value="series">Series</option>
+                  <option value="episode">Episodes</option>
+                </select>
+
+                <input 
+                  type="number" 
+                  placeholder="Year (e.g. 2024)" 
+                  value={filters.year}
+                  onChange={(e) => setFilters(f => ({ ...f, year: e.target.value }))}
+                  className="w-32 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                />
+                
+                <button 
+                  onClick={handleSortByYear}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filters.sortByYear ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}`}
+                >
+                  Sort by Year {filters.sortByYear && '(Client)'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -210,7 +258,7 @@ function App() {
         )}
 
         {/* Error State */}
-        {error && !loading && activeTab === 'home' && (
+        {error && !loading && activeTab === 'home' && isSearching && (
           <div className="flex flex-col items-center justify-center py-20 animate-in zoom-in-95">
              <div className="bg-red-50 dark:bg-red-500/10 p-6 rounded-3xl border border-red-100 dark:border-red-500/20 max-w-md text-center">
                <AlertCircle size={48} className="mx-auto mb-4 text-red-500" />
@@ -220,30 +268,32 @@ function App() {
           </div>
         )}
 
-        {/* Core Grid Container */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 mt-8 relative">
-          
-          {displayedMovies.map((movie) => (
-             <MovieCard 
-               key={`${movie.imdbID}-${activeTab}`} 
-               movie={movie}
-               isFavorite={favorites.some(f => f.imdbID === movie.imdbID)}
-               isWatchlist={watchlist.some(w => w.imdbID === movie.imdbID)}
-               onToggleFav={toggleFavorite}
-               onToggleWatchlist={toggleWatchlist}
-               onClick={() => setSelectedMovieId(movie.imdbID)}
-             />
-          ))}
+        {/* Core Grid Container for Searches, Favorites, Watchlist */}
+        {(isSearching || activeTab !== 'home') && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 relative">
+            
+            {displayedMovies.map((movie) => (
+               <MovieCard 
+                 key={`${movie.imdbID}-${activeTab}`} 
+                 movie={movie}
+                 isFavorite={favorites.some(f => f.imdbID === movie.imdbID)}
+                 isWatchlist={watchlist.some(w => w.imdbID === movie.imdbID)}
+                 onToggleFav={toggleFavorite}
+                 onToggleWatchlist={toggleWatchlist}
+                 onClick={() => setSelectedMovieId(movie.imdbID)}
+               />
+            ))}
 
-          {/* Initial Loading Skeletons */}
-          {loading && activeTab === 'home' && Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={`skel-initial-${i}`} />)}
-          
-          {/* Append Skeletons when fetching next page */}
-          {loadingMore && activeTab === 'home' && Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={`skel-more-${i}`} />)}
-        </div>
+            {/* Initial Loading Skeletons */}
+            {loading && activeTab === 'home' && Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={`skel-initial-${i}`} />)}
+            
+            {/* Append Skeletons when fetching next page */}
+            {loadingMore && activeTab === 'home' && Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={`skel-more-${i}`} />)}
+          </div>
+        )}
 
         {/* Infinite Scroll Trigger Node */}
-        {activeTab === 'home' && !loading && !error && movies.length < totalResults && (
+        {activeTab === 'home' && isSearching && !loading && !error && movies.length < totalResults && (
            <div ref={ref} className="w-full flex justify-center py-16 opacity-0">
              <Loader2 size={32} className="animate-spin text-slate-400" />
            </div>
@@ -251,15 +301,15 @@ function App() {
       </main>
 
       {/* Footer Navigation (Mobile Only) */}
-      <nav className="sm:hidden fixed bottom-0 inset-x-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-around p-3 pb-safe z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
-         <button onClick={() => setActiveTab('home')} className={`p-2 flex flex-col items-center gap-1 ${activeTab === 'home' ? 'text-red-600 dark:text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>
-           <Home size={24} /> <span className="text-[10px] font-bold">Home</span>
+      <nav className="sm:hidden fixed bottom-0 inset-x-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around p-3 pb-safe z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
+         <button onClick={() => { setActiveTab('home'); setIsSearching(false); setActiveQuery(''); }} className={`p-2 flex flex-col items-center gap-1 transition-colors ${activeTab === 'home' && !isSearching ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`}>
+           <Home size={24} className={activeTab === 'home' && !isSearching ? 'text-red-600' : ''} /> <span className="text-[10px] font-bold">Home</span>
          </button>
-         <button onClick={() => setActiveTab('favorites')} className={`p-2 flex flex-col items-center gap-1 ${activeTab === 'favorites' ? 'text-red-600 dark:text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>
-           <Heart size={24} className={activeTab === 'favorites' ? 'fill-current' : ''}/> <span className="text-[10px] font-bold">Favorites</span>
+         <button onClick={() => { setActiveTab('favorites'); setIsSearching(false); }} className={`p-2 flex flex-col items-center gap-1 transition-colors ${activeTab === 'favorites' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`}>
+           <Heart size={24} className={activeTab === 'favorites' ? 'fill-red-500 text-red-500' : ''}/> <span className="text-[10px] font-bold">Favorites</span>
          </button>
-         <button onClick={() => setActiveTab('watchlist')} className={`p-2 flex flex-col items-center gap-1 ${activeTab === 'watchlist' ? 'text-red-600 dark:text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>
-           <Bookmark size={24} className={activeTab === 'watchlist' ? 'fill-current' : ''}/> <span className="text-[10px] font-bold">Watchlist</span>
+         <button onClick={() => { setActiveTab('watchlist'); setIsSearching(false); }} className={`p-2 flex flex-col items-center gap-1 transition-colors ${activeTab === 'watchlist' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`}>
+           <Bookmark size={24} className={activeTab === 'watchlist' ? 'fill-emerald-500 text-emerald-500' : ''}/> <span className="text-[10px] font-bold">Watchlist</span>
          </button>
       </nav>
 

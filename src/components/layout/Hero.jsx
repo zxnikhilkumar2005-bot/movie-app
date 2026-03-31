@@ -1,105 +1,130 @@
-import { Play, Info, AlertTriangle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { Play, Info } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useHeroMovies } from '../../hooks/useHeroMovies';
 
 export const Hero = ({ onPlay }) => {
+  const { heroMovies, loading, error } = useHeroMovies();
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (!heroMovies || heroMovies.length === 0) return;
+
+    // Change movie every 8 seconds
+    const intervalId = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % heroMovies.length);
+    }, 8000);
+
+    return () => clearInterval(intervalId);
+  }, [heroMovies]);
+
+  if (loading) {
+    return (
+      <section className="relative w-full min-h-[85vh] sm:min-h-screen text-white flex flex-col justify-center items-center bg-slate-900 animate-pulse">
+        <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+      </section>
+    );
+  }
+
+  if (error || !heroMovies || heroMovies.length === 0) {
+    return (
+      <section className="relative w-full min-h-[60vh] text-white flex flex-col justify-center items-center bg-slate-900">
+        <p className="text-xl text-slate-400">Unable to load featured movies.</p>
+      </section>
+    );
+  }
+
+  const currentMovie = heroMovies[currentIndex];
+  // Ensure we have a high quality background image. If OMDB poster is low quality, we could use an unsplash fallback,
+  // but OMDB posters are usually okay. Let's try to blur the background and show the clear poster, or just use it.
+  const bgImage = currentMovie.Poster !== 'N/A' 
+    ? currentMovie.Poster 
+    : 'https://images.unsplash.com/photo-1533613220915-609f661a6fe1?q=80&w=2000&auto=format&fit=crop';
+
   return (
-    <section className="relative w-full min-h-[85vh] sm:min-h-screen text-white flex flex-col justify-between overflow-hidden">
+    <section className="relative w-full min-h-[85vh] sm:min-h-screen text-white flex flex-col justify-center overflow-hidden bg-slate-950">
       
-      {/* Absolute Background Image Layer */}
-      <div className="absolute inset-0 z-0">
-        <img 
-          src="https://images.unsplash.com/photo-1533613220915-609f661a6fe1?q=80&w=2000&auto=format&fit=crop" 
-          alt="War Machine Hero Background" 
-          className="w-full h-full object-cover"
-        />
-        {/* Netflix-style Gradients:
-            1. Left gradient for text readability.
-            2. Bottom gradient perfectly merges with the background color of the grid section below.
-            3. Right gradient for small badges/balance. 
-        */}
-        <div className="absolute inset-0 bg-linear-to-r from-black/90 via-black/50 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-linear-to-t from-slate-900 to-transparent" />
-      </div>
-
-      {/* Hero Content (Left side text, Buttons) */}
-      <div className="relative z-10 flex-col flex-1 flex justify-center max-w-[1400px] w-full mx-auto px-4 sm:px-8 mt-20 md:mt-0">
-        <motion.div 
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8 }}
-          className="max-w-xl md:max-w-2xl"
+      <AnimatePresence mode="wait">
+        <motion.div
+           key={currentIndex}
+           initial={{ opacity: 0 }}
+           animate={{ opacity: 1 }}
+           exit={{ opacity: 0 }}
+           transition={{ duration: 1.5, ease: 'easeInOut' }}
+           className="absolute inset-0 z-0"
         >
-          {/* Netflix series branding (optional) */}
-          <div className="flex items-center gap-2 mb-4">
-             <span className="text-red-600 font-bold uppercase tracking-widest text-sm flex items-center">
-               <span className="w-1.5 h-1.5 bg-red-600 rounded-full mr-2"></span> N E T F L I X
-             </span>
-             <span className="text-sm font-semibold tracking-widest uppercase text-slate-300">Original</span>
+          {/* Background Image Layer */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-105"
+            style={{ backgroundImage: `url(${bgImage})`, filter: 'blur(3px) brightness(0.6)' }}
+          />
+
+          {/* Sharp Poster Right aligned for desktop */}
+          <div className="absolute right-[5%] top-1/2 -translate-y-1/2 hidden lg:block w-[350px] aspect-[2/3] rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-white/10 rotate-2">
+            <img src={bgImage} alt={currentMovie.Title} className="w-full h-full object-cover" />
           </div>
 
-          {/* Title */}
-          <h1 className="text-5xl sm:text-6xl md:text-8xl font-black uppercase tracking-tighter leading-none mb-2 drop-shadow-2xl">
-            WAR MACHINE
-          </h1>
-          
-          {/* Tagline */}
-          <p className="text-xl md:text-2xl font-light text-slate-300 mb-5 leading-snug drop-shadow-lg">
-            All Grit. No Quit. Watch Now.
-          </p>
-
-          {/* Short Description */}
-          <p className="text-sm md:text-base text-slate-100/90 leading-relaxed mb-8 max-w-lg drop-shadow-md">
-            When a four-star general is ordered to win an impossible war, he must navigate treacherous political landscapes, brutal battlefield conditions, and his own unraveling sanity to achieve victory against all odds.
-          </p>
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-4">
-            <button 
-              onClick={onPlay}
-              className="flex items-center gap-2 bg-white text-black px-6 md:px-8 py-2.5 md:py-3.5 rounded font-bold text-lg md:text-xl hover:bg-slate-200 transition-all hover:scale-105 shadow-xl"
-            >
-              <Play className="fill-black" size={24} /> Play
-            </button>
-            <button className="flex items-center gap-2 bg-slate-500/50 text-white backdrop-blur-md px-6 md:px-8 py-2.5 md:py-3.5 rounded font-bold text-lg md:text-xl hover:bg-slate-500/70 transition-all hover:scale-105 border border-white/10 shadow-xl">
-              <Info size={24} /> More Info
-            </button>
-          </div>
+          {/* Netflix-style Gradients */}
+          <div className="absolute inset-0 bg-linear-to-r from-black via-black/80 lg:via-black/60 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-2/3 bg-linear-to-t from-slate-950 via-slate-950/40 to-transparent" />
         </motion.div>
-      </div>
+      </AnimatePresence>
 
-      {/* Age Rating Badge (Right side edge) */}
-      <div className="absolute top-1/2 right-0 transform -translate-y-1/2 bg-black/60 backdrop-blur-sm border-l-4 border-slate-300 text-white pl-4 pr-6 py-2 z-10 text-lg font-bold shadow-2xl hidden md:block">
-        U/A 16+
-      </div>
+      {/* Hero Content */}
+      <div className="relative z-10 flex-col flex-1 flex justify-center max-w-[1400px] w-full mx-auto px-4 sm:px-8 mt-20 md:mt-0 pt-20">
+        <AnimatePresence mode="wait">
+          <motion.div 
+            key={`text-${currentIndex}`}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -30 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="max-w-xl md:max-w-2xl lg:max-w-3xl"
+          >
+            {/* Netflix series branding */}
+            <div className="flex items-center gap-2 mb-4">
+               <span className="text-red-600 font-bold uppercase tracking-widest text-sm flex items-center">
+                 <span className="w-1.5 h-1.5 bg-red-600 rounded-full mr-2 shadow-[0_0_10px_red]"></span> N E T F L I X
+               </span>
+               <span className="text-sm font-semibold tracking-widest uppercase text-slate-300">Film</span>
+            </div>
 
-      {/* Bottom Overlay Section: Notice & CTA */}
-      <div className="relative z-10 w-full mt-auto mb-8 sm:mb-10 lg:mb-16">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-8">
-          <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
-             
-             {/* Notice (Left) */}
-             <div className="flex items-start gap-4">
-               <AlertTriangle className="text-yellow-500 shrink-0 mt-1" size={24} />
-               <div>
-                 <h4 className="font-bold text-slate-200 text-base md:text-lg">Content Warning</h4>
-                 <p className="text-slate-400 text-sm leading-relaxed max-w-2xl">
-                   This film contains sequences of intense violence, strong language throughout, and some disturbing images. Viewer discretion is advised. Audio description available.
-                 </p>
-               </div>
-             </div>
+            {/* Title */}
+            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter leading-none mb-3 drop-shadow-2xl text-white">
+              {currentMovie.Title}
+            </h1>
+            
+            {/* Metadata (Year, Runtime, Rating, Genre) */}
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm sm:text-base font-medium text-slate-300 mb-5">
+               <span className="text-green-500 font-bold">{currentMovie.imdbRating} Rating</span>
+               <span className="px-2 py-0.5 border border-slate-500 rounded text-xs">{currentMovie.Rated || 'U/A 16+'}</span>
+               <span>{currentMovie.Year}</span>
+               <span>{currentMovie.Runtime}</span>
+               <span className="hidden sm:inline-block px-2 text-slate-500">•</span>
+               <span className="hidden sm:inline-block text-slate-400">{currentMovie.Genre}</span>
+            </div>
 
-             {/* Telegram CTA (Right) */}
-             <div className="shrink-0 w-full md:w-auto mt-2 md:mt-0 flex">
-               <a 
-                 href="#" 
-                 className="w-full text-center bg-[#2AABEE] hover:bg-[#228ac0] text-white px-6 py-3 rounded-xl font-bold transition-all hover:-translate-y-1 shadow-[0_0_20px_rgba(42,171,238,0.3)] flex items-center justify-center gap-2"
-               >
-                 Join our Telegram
-               </a>
-             </div>
+            {/* Short Description */}
+            <p className="text-sm sm:text-base md:text-lg text-slate-200 leading-relaxed mb-8 max-w-lg lg:max-w-xl drop-shadow-md line-clamp-3 sm:line-clamp-4">
+              {currentMovie.Plot !== 'N/A' ? currentMovie.Plot : 'No description available for this title.'}
+            </p>
 
-          </div>
-        </div>
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-4">
+              <button 
+                onClick={onPlay}
+                className="flex items-center justify-center gap-2 bg-white text-black px-6 sm:px-8 py-2.5 sm:py-3.5 rounded font-bold text-base sm:text-xl hover:bg-slate-200 transition-all hover:scale-105 shadow-xl min-w-[140px]"
+              >
+                <Play className="fill-black" size={24} /> Play
+              </button>
+              <button 
+                className="flex items-center justify-center gap-2 bg-slate-500/50 text-white backdrop-blur-md px-6 sm:px-8 py-2.5 sm:py-3.5 rounded font-bold text-base sm:text-xl hover:bg-slate-500/70 transition-all hover:scale-105 border border-white/10 shadow-xl min-w-[170px]"
+              >
+                <Info size={24} /> More Info
+              </button>
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
     </section>
